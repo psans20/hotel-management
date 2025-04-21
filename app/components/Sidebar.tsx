@@ -29,7 +29,7 @@ export default function Sidebar({ onSelectItem }: SidebarProps) {
                 className={`w-full text-left px-4 py-2 rounded-lg transition-colors ${
                   pathname === item.path
                     ? 'bg-blue-600 text-white'
-                    : 'hover:bg-gray-700'
+                    : 'hover:bg-gray-700 cursor-pointer'
                 }`}
               >
                 {item.name}

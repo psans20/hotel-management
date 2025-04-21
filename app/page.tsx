@@ -31,6 +31,10 @@ export default function Home() {
       <div className="flex">
         <Sidebar onSelectItem={setSelectedItem} />
         <main className="flex-1 p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h1 className="text-2xl font-bold">Hotel Management System</h1>
+          </div>
+          
           {renderContent()}
         </main>
       </div>
