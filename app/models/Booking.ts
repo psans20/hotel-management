@@ -52,8 +52,9 @@ const bookingSchema = new mongoose.Schema({
   },
   meal: {
     type: String,
-    enum: ['None', 'Breakfast', 'Half Board', 'Full Board'],
-    default: 'None'
+    required: true,
+    enum: ['Breakfast', 'Lunch', 'Dinner', 'None'],
+    default: 'Breakfast'
   },
   noOfDays: {
     type: Number,

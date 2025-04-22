@@ -76,91 +76,53 @@ export async function POST(request: Request) {
 export async function PUT(request: Request) {
   try {
     await connectToDatabase();
-    const data = await request.json();
-    console.log('Received update request with data:', data);
-    
-    const { bookingRef, ...updateData } = data;
-
-    if (!bookingRef) {
-      console.error('Missing bookingRef in update request');
-      return NextResponse.json({ 
-        error: 'Booking reference is required',
-        details: 'The bookingRef field is missing from the request'
-      }, { status: 400 });
-    }
-
-    // Validate required fields
-    const requiredFields = ['customerRef', 'roomNumber', 'checkInDate', 'checkOutDate', 'numberOfGuests', 'roomType', 'totalAmount'];
-    const missingFields = requiredFields.filter(field => !updateData[field]);
-    
-    if (missingFields.length > 0) {
-      console.error('Missing required fields:', missingFields);
-      return NextResponse.json({ 
-        error: `Missing required fields: ${missingFields.join(', ')}`,
-        details: `The following required fields are missing or empty: ${missingFields.join(', ')}`
-      }, { status: 400 });
-    }
-
-    // Log the values of required fields
-    console.log('Required fields values:', {
-      customerRef: updateData.customerRef,
-      roomNumber: updateData.roomNumber,
-      checkInDate: updateData.checkInDate,
-      checkOutDate: updateData.checkOutDate,
-      numberOfGuests: updateData.numberOfGuests,
-      roomType: updateData.roomType,
-      totalAmount: updateData.totalAmount
-    });
-    
-    // Convert date strings to Date objects
-    if (typeof updateData.checkInDate === 'string') {
-      updateData.checkInDate = new Date(updateData.checkInDate);
-    }
-    
-    if (typeof updateData.checkOutDate === 'string') {
-      updateData.checkOutDate = new Date(updateData.checkOutDate);
-    }
-
-    // Find the booking first to ensure it exists
-    const existingBooking = await Booking.findOne({ bookingRef });
-    if (!existingBooking) {
-      console.error('Booking not found with reference:', bookingRef);
-      return NextResponse.json({ 
-        error: 'Booking not found',
-        details: `No booking found with reference: ${bookingRef}`
-      }, { status: 404 });
-    }
-
-    console.log('Found existing booking:', existingBooking);
-
-    // Update the booking
+    const booking = await request.json();
+  
+    // Find and update the booking
     const updatedBooking = await Booking.findOneAndUpdate(
-      { bookingRef },
-      { $set: updateData },
-      { new: true, runValidators: true }
+      { bookingRef: booking.bookingRef },
+      {
+        $set: {
+          customerRef: booking.customerRef,
+          roomNumber: booking.roomNumber,
+          checkInDate: booking.checkInDate,
+          checkOutDate: booking.checkOutDate,
+          numberOfGuests: booking.numberOfGuests,
+          roomType: booking.roomType,
+          meal: booking.meal || 'None',
+          noOfDays: booking.noOfDays,
+          paidTax: booking.paidTax,
+          actualTotal: booking.actualTotal,
+          totalCost: booking.totalCost,
+          totalAmount: booking.totalAmount,
+          status: booking.status
+        }
+      },
+      { new: true, runValidators: false }
     );
-
+console.log(updatedBooking,"11111111111111111111111111")
     if (!updatedBooking) {
-      console.error('Failed to update booking:', bookingRef);
-      return NextResponse.json({ 
-        error: 'Failed to update booking',
-        details: 'The update operation did not return an updated booking'
-      }, { status: 500 });
+      return NextResponse.json(
+        { error: 'Booking not found' },
+        { status: 404 }
+      );
     }
 
-    console.log('Successfully updated booking:', updatedBooking);
-
-    // Return the updated booking
-    return NextResponse.json({ 
+    // Return the updated booking data
+    return NextResponse.json({
       message: 'Booking updated successfully',
-      booking: updatedBooking 
+      booking: updatedBooking
     });
-  } catch (error) {
-    console.error('Error updating booking:', error);
-    return NextResponse.json({ 
-      error: 'Failed to update booking',
-      details: error instanceof Error ? error.message : String(error)
-    }, { status: 500 });
+
+  } catch (error: any) {
+    console.error('Update error:', error);
+    return NextResponse.json(
+      { 
+        error: 'Failed to update booking',
+        details: error.message 
+      },
+      { status: 500 }
+    );
   }
 }
 

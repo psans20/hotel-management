@@ -68,12 +68,14 @@ export async function POST(request: Request) {
     await newBooking.save();
     
     return NextResponse.json({ 
+      success: true,
       message: 'Customer and booking entry created successfully',
       customer 
-    });
+    }, { status: 201 });
   } catch (error) {
     console.error('Error creating customer:', error);
     return NextResponse.json({ 
+      success: false,
       error: 'Failed to create customer',
       details: error instanceof Error ? error.message : String(error)
     }, { status: 500 });

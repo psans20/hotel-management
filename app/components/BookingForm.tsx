@@ -310,6 +310,7 @@ export default function BookingForm() {
     }
   };
 
+  
   const handleReset = () => {
     setFormData({
       bookingRef: '',

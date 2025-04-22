@@ -123,10 +123,21 @@ export default function CustomerForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Submitting form data:', formData);
     
     try {
       setLoading(true);
+      
+      // Validate required fields
+      const requiredFields = ['customerName', 'gender', 'mobile', 'email'] as const;
+      const missingFields = requiredFields.filter(field => !formData[field]);
+      
+      if (missingFields.length > 0) {
+        setModalTitle('Error');
+        setModalMessage(`Please fill in required fields: ${missingFields.join(', ')}`);
+        setModalType('error');
+        setModalOpen(true);
+        return;
+      }
       
       // Generate a customer reference if not provided
       const customerData = {
@@ -144,28 +155,39 @@ export default function CustomerForm() {
         body: JSON.stringify(customerData),
       });
       
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error('Server error:', errorData);
-        throw new Error(errorData.error || 'Failed to save customer');
-      }
+      console.log('Response status:', response.status);
+      console.log('Response ok:', response.ok);
       
       const result = await response.json();
-      console.log('Save result:', result);
+      console.log('Response data:', result);
       
-      // Reset form after successful save
-      handleReset();
-      
-      // Refresh the customer list immediately
-      await fetchCustomers();
-      
-      // Show success modal
-      setModalTitle('Success');
-      setModalMessage('Customer has been added successfully!');
-      setModalType('success');
-      setModalOpen(true);
+      // Check if we have a successful response
+      if (response.ok && result.customer) {
+        console.log('Customer created successfully:', result.customer);
+        
+        // Update the store with the new customer
+        updateCustomer(result.customer);
+        
+        // Update the customers list to reflect the change immediately
+        setCustomers(prevCustomers => [...prevCustomers, result.customer]);
+        
+        // Reset form after successful save
+        handleReset();
+        
+        // Show success modal
+        setModalTitle('Success');
+        setModalMessage('Customer has been added successfully!');
+        setModalType('success');
+        setModalOpen(true);
+        
+        // Refresh the customer list to ensure we have the latest data
+        await fetchCustomers();
+      } else {
+        console.error('Failed response:', result);
+        throw new Error(result.error || 'Failed to create customer');
+      }
     } catch (error) {
-      console.error('Error saving customer:', error);
+      console.error('Error in customer creation:', error);
       
       // Show error modal
       setModalTitle('Error');
@@ -206,38 +228,17 @@ export default function CustomerForm() {
       setLoading(true);
       const encodedCustomerRef = encodeURIComponent(formData.customerRef.trim());
       console.log('Attempting to delete customer with ref:', formData.customerRef);
-      console.log('Encoded customer ref:', encodedCustomerRef);
       
-      // Use the direct delete endpoint
-      const deleteUrl = `/api/direct-delete?customerRef=${encodedCustomerRef}`;
-      console.log('Delete URL:', deleteUrl);
-      
-      const response = await fetch(deleteUrl, {
+      const response = await fetch(`/api/customers/${encodedCustomerRef}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
         },
       });
 
-      console.log('Delete response status:', response.status);
-      
-      // Log the raw response text for debugging
-      const responseText = await response.text();
-      console.log('Raw response text:', responseText);
-      
-      // Try to parse the response as JSON if possible
-      let result;
-      try {
-        result = JSON.parse(responseText);
-        console.log('Parsed response:', result);
-      } catch (e) {
-        console.error('Failed to parse response as JSON:', e);
-        throw new Error('Invalid response from server');
-      }
-      
       if (!response.ok) {
-        console.error('Server error:', result);
-        throw new Error(result.error || 'Failed to delete customer');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to delete customer');
       }
 
       // Reset form and refresh customer list immediately
