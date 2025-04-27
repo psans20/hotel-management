@@ -47,29 +47,9 @@ export async function POST(request: Request) {
     const customer = new Customer(data);
     await customer.save();
     
-    // Create corresponding booking entry
-    const newBooking = new Booking({
-      bookingRef: `BOOK-${Math.floor(1000 + Math.random() * 9000)}`,
-      customerRef: customer.mobile,
-      roomNumber: '',
-      checkInDate: null,
-      checkOutDate: null,
-      numberOfGuests: 1,
-      roomType: 'Single',
-      meal: 'Breakfast',
-      noOfDays: 0,
-      paidTax: 0,
-      actualTotal: 0,
-      totalCost: 0,
-      totalAmount: 0,
-      status: 'Pending'
-    });
-    
-    await newBooking.save();
-    
     return NextResponse.json({ 
       success: true,
-      message: 'Customer and booking entry created successfully',
+      message: 'Customer created successfully',
       customer 
     }, { status: 201 });
   } catch (error) {

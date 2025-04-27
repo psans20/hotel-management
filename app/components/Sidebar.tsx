@@ -1,20 +1,17 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
 
 interface SidebarProps {
   onSelectItem: (item: string) => void;
+  selectedItem: string;
 }
 
-export default function Sidebar({ onSelectItem }: SidebarProps) {
-  const pathname = usePathname();
-
+export default function Sidebar({ onSelectItem, selectedItem }: SidebarProps) {
   const menuItems = [
+    { name: 'Dashboard', path: '/' },
     { name: 'Customer', path: '/customer' },
     { name: 'Booking', path: '/booking' },
-    { name: 'Details', path: '/details' },
-    { name: 'Report', path: '/report' },
   ];
 
   return (
@@ -27,7 +24,7 @@ export default function Sidebar({ onSelectItem }: SidebarProps) {
               <button
                 onClick={() => onSelectItem(item.name)}
                 className={`w-full text-left px-4 py-2 rounded-lg transition-colors ${
-                  pathname === item.path
+                  selectedItem === item.name
                     ? 'bg-blue-600 text-white'
                     : 'hover:bg-gray-700 cursor-pointer'
                 }`}

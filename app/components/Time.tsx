@@ -30,12 +30,12 @@ export default function Time() {
   }, []);
 
   return (
-    <div className="flex items-center justify-between px-4 py-2 bg-">
-      <div className="text-2xl font-semibold">
+    <div className="flex items-center justify-between px-4 py-2 bg-black">
+      <div className="text-2xl font-semibold text-[#FFD700]">
         {time}
       </div>
-      <h1 className="text-3xl font-bold">Hotel Management</h1>
-      <div className="text-2xl font-semibold invisible">
+      <h1 className="text-3xl font-bold text-[#FFD700]">Hotel Management</h1>
+      <div className="text-2xl font-semibold invisible text-[#FFD700]">
         {time}
       </div>
     </div>
