@@ -62,6 +62,9 @@ export async function POST(request: Request) {
   }
 }
 
+// Add a helper to normalize phone numbers
+const normalizePhone = (phone: string) => phone ? phone.replace(/^0+/, '') : '';
+
 // PUT endpoint to update a customer
 export async function PUT(request: Request) {
   try {
@@ -75,8 +78,17 @@ export async function PUT(request: Request) {
       }, { status: 400 });
     }
 
+    // Normalize customerRef for lookup
+    const normalizedCustomerRef = normalizePhone(customerRef);
+    if (updateData.mobile) {
+      updateData.mobile = normalizePhone(updateData.mobile);
+    }
+
+    // Debug log
+    console.log('PUT /api/customers received:', { customerRef, normalizedCustomerRef, updateData });
+
     // Get the old customer data to check if mobile number changed
-    const oldCustomer = await Customer.findOne({ customerRef });
+    const oldCustomer = await Customer.findOne({ customerRef: { $in: [customerRef, normalizedCustomerRef] } });
     if (!oldCustomer) {
       return NextResponse.json({ 
         error: 'Customer not found' 
@@ -85,7 +97,7 @@ export async function PUT(request: Request) {
 
     // Update the customer
     const customer = await Customer.findOneAndUpdate(
-      { customerRef },
+      { customerRef: { $in: [customerRef, normalizedCustomerRef] } },
       updateData,
       { new: true, runValidators: true }
     );
@@ -93,10 +105,13 @@ export async function PUT(request: Request) {
     // If mobile number changed, update the booking reference
     if (oldCustomer.mobile !== customer.mobile) {
       await Booking.findOneAndUpdate(
-        { customerRef: oldCustomer.mobile },
+        { customerRef: { $in: [oldCustomer.mobile, normalizePhone(oldCustomer.mobile)] } },
         { customerRef: customer.mobile }
       );
     }
+
+    // Debug log
+    console.log('PUT /api/customers updated:', customer);
 
     return NextResponse.json({ 
       message: 'Customer and booking updated successfully',
@@ -138,11 +153,11 @@ export async function DELETE(request: Request) {
     // Delete the customer
     await Customer.deleteOne({ customerRef: customerRef.trim() });
     
-    // Delete corresponding booking
-    await Booking.deleteOne({ customerRef: customer.mobile });
+    // Delete all bookings with this customer's mobile
+    await Booking.deleteMany({ customerRef: customer.mobile });
 
     return NextResponse.json(
-      { message: 'Customer and booking deleted successfully' },
+      { message: 'Customer and all related bookings deleted successfully' },
       { status: 200 }
     );
   } catch (error) {

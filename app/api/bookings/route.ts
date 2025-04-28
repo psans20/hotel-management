@@ -77,30 +77,25 @@ export async function PUT(request: Request) {
   try {
     await connectToDatabase();
     const booking = await request.json();
-  
-    // Find and update the booking
+    const { customerRef, ...updateData } = booking;
+
+    if (!customerRef) {
+      return NextResponse.json({
+        error: 'Customer reference (mobile) is required'
+      }, { status: 400 });
+    }
+
+    // Debug log
+    console.log('PUT /api/bookings received:', { customerRef, updateData });
+
+    // Find and update the booking by customerRef
     const updatedBooking = await Booking.findOneAndUpdate(
-      { bookingRef: booking.bookingRef },
-      {
-        $set: {
-          customerRef: booking.customerRef,
-          roomNumber: booking.roomNumber,
-          checkInDate: booking.checkInDate,
-          checkOutDate: booking.checkOutDate,
-          numberOfGuests: booking.numberOfGuests,
-          roomType: booking.roomType,
-          meal: booking.meal || 'None',
-          noOfDays: booking.noOfDays,
-          paidTax: booking.paidTax,
-          actualTotal: booking.actualTotal,
-          totalCost: booking.totalCost,
-          totalAmount: booking.totalAmount,
-          status: booking.status
-        }
-      },
-      { new: true, runValidators: false }
+      { customerRef },
+      updateData,
+      { new: true, runValidators: true }
     );
-console.log(updatedBooking,"11111111111111111111111111")
+    console.log('PUT /api/bookings updated:', updatedBooking);
+
     if (!updatedBooking) {
       return NextResponse.json(
         { error: 'Booking not found' },
@@ -117,9 +112,9 @@ console.log(updatedBooking,"11111111111111111111111111")
   } catch (error: any) {
     console.error('Update error:', error);
     return NextResponse.json(
-      { 
+      {
         error: 'Failed to update booking',
-        details: error.message 
+        details: error.message
       },
       { status: 500 }
     );

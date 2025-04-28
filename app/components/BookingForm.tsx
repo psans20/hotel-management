@@ -226,128 +226,6 @@ export default function BookingForm() {
     }
   };
 
-  const handleUpdate = async () => {
-    if (!formData.bookingRef) {
-      setModalMessage('Please fetch a booking first');
-      setShowModal(true);
-      return;
-    }
-
-    if (!formData.checkInDate || !formData.checkOutDate || !formData.roomNumber) {
-      setModalMessage('Please fill in all required fields');
-      setShowModal(true);
-      return;
-    }
-
-    try {
-      setLoading(true);
-      
-      // Calculate the costs based on dates and room type
-      const days = Math.ceil(
-        (new Date(formData.checkOutDate).getTime() - new Date(formData.checkInDate).getTime()) 
-        / (1000 * 60 * 60 * 24)
-      );
-      
-      const { actualTotal, paidTax, totalCost } = calculateCosts(days, formData.roomType);
-      
-      // Prepare the booking data for update
-      const bookingData = {
-        bookingRef: formData.bookingRef,
-        customerRef: formData.mobile,
-        roomNumber: formData.roomNumber,
-        checkInDate: formData.checkInDate,
-        checkOutDate: formData.checkOutDate,
-        numberOfGuests: 1, // Default to 1 if not specified
-        roomType: formData.roomType,
-        meal: formData.meal,
-        noOfDays: days,
-        paidTax: parseFloat(paidTax.toString()),
-        actualTotal: parseFloat(actualTotal.toString()),
-        totalCost: parseFloat(totalCost.toString()),
-        totalAmount: parseFloat(totalCost.toString()),
-        status: 'Pending'
-      };
-
-      console.log('Sending update request with data:', bookingData);
-
-      const response = await fetch('/api/bookings', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(bookingData),
-      });
-
-      const data = await response.json();
-      console.log('Update response:', data);
-
-      if (!response.ok) {
-        console.error('Update failed with status:', response.status);
-        console.error('Error details:', data);
-        throw new Error(data.error || data.details || 'Failed to update booking');
-      }
-
-      setModalMessage('Booking Updated Successfully');
-      setShowModal(true);
-      
-      // Update the form with the new calculated values
-      setFormData(prev => ({
-        ...prev,
-        noOfDays: days.toString(),
-        paidTax: paidTax.toString(),
-        actualTotal: actualTotal.toString(),
-        totalCost: totalCost.toString()
-      }));
-      
-      // Refresh the bookings list
-      await fetchBookings();
-    } catch (error) {
-      console.error('Error updating booking:', error);
-      setModalMessage(error instanceof Error ? error.message : 'Failed to update booking');
-      setShowModal(true);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  
-  const handleReset = () => {
-    setFormData({
-      bookingRef: '',
-      mobile: '',
-      roomNumber: '',
-      checkInDate: '',
-      checkOutDate: '',
-      numberOfGuests: 1,
-      totalAmount: 0,
-      roomType: 'Standard',
-      meal: 'Breakfast',
-      noOfDays: '',
-      paidTax: '',
-      actualTotal: '',
-      totalCost: ''
-    });
-    setSelectedCustomer(null);
-  };
-
-  const formatDateForInput = (dateStr: string) => {
-    if (!dateStr) return '';
-    
-    // Check if the date is already in YYYY-MM-DD format
-    if (dateStr.includes('-')) {
-      return dateStr;
-    }
-    
-    // Handle DD/MM/YYYY format
-    try {
-      const [day, month, year] = dateStr.split('/');
-      return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-    } catch (error) {
-      console.error('Error formatting date:', error);
-      return '';
-    }
-  };
-
   const calculateCosts = (days: number, roomType: string) => {
     let costPerNight = 0;
     let taxPerNight = 0;
@@ -380,57 +258,103 @@ export default function BookingForm() {
     return { actualTotal, paidTax, totalCost };
   };
 
-  const formatCurrency = (amount: number) => {
-    return `£${amount.toFixed(2)}`;
-  };
-
-  // Function to fetch customer data
-  const handleFetchData = async () => {
-    if (!formData.mobile) {
-      setError('Please enter a phone number');
-      return;
-    }
-
+  const handleUpdate = async () => {
     setLoading(true);
-    setError(null);
-
     try {
-      // Find customer in our customers state (which contains API data)
-      const existingCustomer = customers.find(c => c.mobile === formData.mobile);
-      
-      if (!existingCustomer) {
-        setError('This customer does not exist. Please add them in Customer Form first.');
-        setSelectedCustomer(null);
-        return;
-      }
-
-      // Set the selected customer
-      setSelectedCustomer(existingCustomer);
-
-      // Find any existing booking for this customer
-      const existingBooking = bookings.find(b => b.customerRef === formData.mobile);
-      if (existingBooking) {
+      // Always try to update the booking
+      const days = Math.ceil(
+        (new Date(formData.checkOutDate).getTime() - new Date(formData.checkInDate).getTime()) 
+        / (1000 * 60 * 60 * 24)
+      );
+      const { actualTotal, paidTax, totalCost } = calculateCosts(days, formData.roomType);
+      const bookingData = {
+        bookingRef: formData.bookingRef,
+        customerRef: formData.mobile,
+        roomNumber: formData.roomNumber,
+        checkInDate: formData.checkInDate,
+        checkOutDate: formData.checkOutDate,
+        numberOfGuests: 1,
+        roomType: formData.roomType,
+        meal: formData.meal,
+        noOfDays: days,
+        paidTax: parseFloat(paidTax.toString()),
+        actualTotal: parseFloat(actualTotal.toString()),
+        totalCost: parseFloat(totalCost.toString()),
+        totalAmount: parseFloat(totalCost.toString()),
+        status: 'Pending'
+      };
+      const response = await fetch('/api/bookings', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(bookingData),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        setModalMessage(data.error || data.details || 'Failed to update booking');
+        setShowModal(true);
+      } else {
+        setModalMessage('Booking Updated Successfully');
+        setShowModal(true);
         setFormData(prev => ({
           ...prev,
-          bookingRef: existingBooking.bookingRef,
-          checkInDate: existingBooking.checkInDate ? formatDateForInput(existingBooking.checkInDate) : '',
-          checkOutDate: existingBooking.checkOutDate ? formatDateForInput(existingBooking.checkOutDate) : '',
-          roomType: existingBooking.roomType || 'Standard',
-          roomNumber: existingBooking.roomNumber || '101',
-          meal: existingBooking.meal || 'Breakfast',
-          noOfDays: existingBooking.noOfDays.toString(),
-          paidTax: existingBooking.paidTax.toString(),
-          actualTotal: existingBooking.actualTotal.toString(),
-          totalCost: existingBooking.totalCost.toString(),
-          numberOfGuests: existingBooking.numberOfGuests
+          noOfDays: days.toString(),
+          paidTax: paidTax.toString(),
+          actualTotal: actualTotal.toString(),
+          totalCost: totalCost.toString()
         }));
+        await fetchBookings();
       }
     } catch (error) {
-      console.error('Error:', error);
-      setError('Failed to fetch customer data');
+      setModalMessage(error instanceof Error ? error.message : 'Failed to update booking');
+      setShowModal(true);
     } finally {
       setLoading(false);
     }
+  };
+
+  
+  const handleReset = () => {
+    setFormData({
+      bookingRef: '',
+      mobile: '',
+      roomNumber: '',
+      checkInDate: '',
+      checkOutDate: '',
+      numberOfGuests: 1,
+      totalAmount: 0,
+      roomType: 'Standard',
+      meal: 'Breakfast',
+      noOfDays: '',
+      paidTax: '',
+      actualTotal: '',
+      totalCost: ''
+    });
+    setSelectedCustomer(null);
+  };
+
+  const formatDateForInput = (dateStr: string) => {
+    if (!dateStr) return '';
+    // If already in YYYY-MM-DD format
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+      return dateStr;
+    }
+    // If it's a Date object or ISO string
+    const date = new Date(dateStr);
+    if (!isNaN(date.getTime())) {
+      return date.toISOString().split('T')[0];
+    }
+    // If in DD/MM/YYYY format
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) {
+      const [day, month, year] = dateStr.split('/');
+      return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    }
+    return '';
+  };
+
+  const formatCurrency = (amount: number) => {
+    return `£${amount.toFixed(2)}`;
   };
 
   const mapStoreCustomerToCustomerData = (customer: Customer): CustomerData => ({
@@ -641,15 +565,22 @@ export default function BookingForm() {
     
     setSelectedCustomer(customer);
     
+    // Find the booking for this customer and set bookingRef
+    const existingBooking = bookings.find(
+      b => normalizePhone(b.customerRef) === normalizePhone(customer.mobile)
+    );
+
     setFormData(prev => ({
       ...prev,
-      mobile: customer.mobile
+      mobile: customer.mobile,
+      bookingRef: existingBooking ? existingBooking.bookingRef : ''
     }));
   };
 
   const handleCustomerUpdate = async () => {
     if (!selectedCustomer) {
-      setError('No customer selected');
+      setModalMessage('No customer selected');
+      setShowModal(true);
       return;
     }
 
@@ -690,9 +621,21 @@ export default function BookingForm() {
 
       // Refresh customer data
       await fetchCustomerMobiles();
+      
+      // If there's an existing booking for this customer, update it too
+      const existingBooking = bookings.find(b => b.customerRef === selectedCustomer.mobile);
+      if (existingBooking) {
+        setFormData(prev => ({
+          ...prev,
+          bookingRef: existingBooking.bookingRef,
+          mobile: selectedCustomer.mobile
+        }));
+      }
     } catch (error) {
       console.error('Error updating customer:', error);
       setError(error instanceof Error ? error.message : 'Failed to update customer');
+      setModalMessage(error instanceof Error ? error.message : 'Failed to update customer');
+      setShowModal(true);
     } finally {
       setLoading(false);
     }
@@ -703,308 +646,378 @@ export default function BookingForm() {
     setSelectedCustomer(prev => prev ? { ...prev, [field]: value } : null);
   };
 
-  return (
-    <div className="flex gap-6">
-      {/* Left side - Room Booking Form */}
-      <div className="w-1/3 bg-white p-4 border rounded">
-        <h2 className="text-lg font-semibold mb-4">Customer Details</h2>
-        <form className="space-y-3" onSubmit={handleSubmit}>
-          <div>
-            <label className="block text-sm">Customer Phone No</label>
-            <div className="flex gap-2">
-              <select
-                value={formData.mobile}
-                onChange={(e) => setFormData({ ...formData, mobile: e.target.value })}
-                className="flex-1 border p-1.5 text-sm"
-              >
-                <option value="">Select a customer</option>
-                {customerMobiles.map((customer) => (
-                  <option key={customer.mobile} value={customer.mobile}>
-                    {customer.name} ({customer.mobile})
-                  </option>
-                ))}
-              </select>
-              <button 
-                type="button" 
-                className="bg-black text-yellow-400 px-3 py-1 text-sm"
-                onClick={handleFetchData}
-                disabled={loading}
-              >
-                {loading ? 'Fetching...' : 'Fetch Data'}
-              </button>
-            </div>
-            {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
-          </div>
+  // Add a helper to normalize phone numbers
+  const normalizePhone = (phone: string) => phone ? phone.replace(/^0+/, '') : '';
 
-          <div>
-            <label className="block text-sm">Check-in Date:</label>
-            <input
-              type="date"
-              name="checkInDate"
-              value={formData.checkInDate}
-              onChange={handleDateChange}
-              className="w-full border p-1.5 text-sm"
-            />
-          </div>
-          <div>
-            <label className="block text-sm">Check-out Date:</label>
-            <input
-              type="date"
-              name="checkOutDate"
-              value={formData.checkOutDate}
-              onChange={handleDateChange}
-              className="w-full border p-1.5 text-sm"
-            />
-          </div>
-          <div>
-            <label className="block text-sm">Room Type:</label>
-            <select
-              name="roomType"
-              value={formData.roomType}
-              onChange={(e) => {
-                handleChange(e);
-                if (formData.checkInDate && formData.checkOutDate) {
-                  const days = Math.ceil(
-                    (new Date(formData.checkOutDate).getTime() - new Date(formData.checkInDate).getTime()) 
-                    / (1000 * 60 * 60 * 24)
-                  );
-                  if (days > 0) {
-                    const { actualTotal, paidTax, totalCost } = calculateCosts(days, e.target.value);
-                    setFormData(prev => ({
-                      ...prev,
-                      roomType: e.target.value,
-                      noOfDays: days.toString(),
-                      actualTotal: actualTotal.toString(),
-                      paidTax: paidTax.toString(),
-                      totalCost: totalCost.toString()
-                    }));
-                    return;
-                  }
-                }
-                setFormData(prev => ({
-                  ...prev,
-                  roomType: e.target.value
-                }));
-              }}
-              className="w-full border p-1.5 text-sm"
-            >
-              <option value="Standard">Standard</option>
-              <option value="Deluxe">Deluxe</option>
-              <option value="Suite">Suite</option>
-              <option value="Executive">Executive</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm">Available Room:</label>
-            {(() => {
-              const allRooms = ["101", "102", "103", "104", "203"];
-              const bookedRooms = bookings.map(b => b.roomNumber).filter(Boolean);
-              const availableRooms = allRooms.filter(room => !bookedRooms.includes(room) || room === formData.roomNumber);
-              return (
+  const handleFetchData = async () => {
+    if (!formData.mobile) {
+      setError('Please enter a phone number');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      // Find customer in our customers state (which contains API data)
+      const existingCustomer = customers.find(c => normalizePhone(c.mobile) === normalizePhone(formData.mobile));
+      
+      if (!existingCustomer) {
+        setError('This customer does not exist. Please add them in Customer Form first.');
+        setSelectedCustomer(null);
+        return;
+      }
+
+      // Set the selected customer
+      setSelectedCustomer(existingCustomer);
+
+      // Find any existing booking for this customer (normalize phone numbers)
+      const existingBooking = bookings.find(b => normalizePhone(b.customerRef) === normalizePhone(formData.mobile));
+      if (existingBooking) {
+        setFormData(prev => ({
+          ...prev,
+          bookingRef: existingBooking.bookingRef,
+          checkInDate: formatDateForInput(existingBooking.checkInDate),
+          checkOutDate: formatDateForInput(existingBooking.checkOutDate),
+          roomType: existingBooking.roomType === 'Single' ? 'Standard' : existingBooking.roomType,
+          roomNumber: existingBooking.roomNumber || '101',
+          meal: existingBooking.meal || 'Breakfast',
+          noOfDays: existingBooking.noOfDays.toString(),
+          paidTax: existingBooking.paidTax.toString(),
+          actualTotal: existingBooking.actualTotal.toString(),
+          totalCost: existingBooking.totalCost.toString(),
+          numberOfGuests: existingBooking.numberOfGuests
+        }));
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      setError('Failed to fetch customer data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (formData.mobile) {
+      handleFetchData();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData.mobile]);
+
+  return (
+    <>
+      {/* Mobile overlay */}
+      <div className="fixed inset-0 bg-black text-white flex flex-col items-center justify-center z-50 md:hidden">
+        <h1 className="text-2xl font-bold mb-4">This is not viewable on mobile,</h1>
+        <p className="text-lg">please switch to desktop to view website</p>
+      </div>
+      {/* Main content, hidden on mobile */}
+      <div className="hidden md:flex flex-col gap-6 md:flex-row">
+        {/* Left side - Room Booking Form */}
+        <div className="w-full md:w-1/3 bg-white p-4 border rounded mb-4 md:mb-0">
+          <h2 className="text-lg font-semibold mb-4">Customer Details</h2>
+          <form className="space-y-3" onSubmit={handleSubmit}>
+            <div>
+              <label className="block text-sm">Customer Phone No</label>
+              <div className="flex gap-2">
                 <select
-                  name="roomNumber"
-                  value={formData.roomNumber}
-                  onChange={handleChange}
-                  className="w-full border p-1.5 text-sm"
+                  value={formData.mobile}
+                  onChange={(e) => setFormData({ ...formData, mobile: e.target.value })}
+                  className="flex-1 border p-1.5 text-sm"
                 >
-                  {availableRooms.map(room => (
-                    <option key={room} value={room}>{room}</option>
+                  <option value="">Select a customer</option>
+                  {customerMobiles.map((customer) => (
+                    <option key={customer.mobile} value={customer.mobile}>
+                      {customer.name} ({customer.mobile})
+                    </option>
                   ))}
                 </select>
-              );
-            })()}
-          </div>
-          <div>
-            <label className="block text-sm">Meal:</label>
-            <select
-              name="meal"
-              value={formData.meal}
-              onChange={handleChange}
-              className="w-full border p-1.5 text-sm"
-            >
-              <option value="Breakfast">Breakfast</option>
-              <option value="Lunch">Lunch</option>
-              <option value="Dinner">Dinner</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm">No Of Days:</label>
-            <input
-              type="text"
-              name="noOfDays"
-              value={formData.noOfDays}
-              className="w-full border p-1.5 text-sm"
-              readOnly
-            />
-          </div>
-          <div>
-            <label className="block text-sm">Paid Tax:</label>
-            <input
-              type="text"
-              name="paidTax"
-              value={formData.paidTax ? formatCurrency(parseFloat(formData.paidTax.replace('£', ''))) : ''}
-              className="w-full border p-1.5 text-sm"
-              readOnly
-            />
-          </div>
-          <div>
-            <label className="block text-sm">Actual Total:</label>
-            <input
-              type="text"
-              name="actualTotal"
-              value={formData.actualTotal ? formatCurrency(parseFloat(formData.actualTotal.replace('£', ''))) : ''}
-              className="w-full border p-1.5 text-sm"
-              readOnly
-            />
-          </div>
-          <div>
-            <label className="block text-sm">Total Cost:</label>
-            <input
-              type="text"
-              name="totalCost"
-              value={formData.totalCost ? formatCurrency(parseFloat(formData.totalCost.replace('£', ''))) : ''}
-              className="w-full border p-1.5 text-sm"
-              readOnly
-            />
-          </div>
-          <div>
-            <button 
-              type="button" 
-              onClick={handleBillClick}
-              className="w-full bg-black text-yellow-400 px-4 py-1 text-sm mb-2"
-            >
-              Bill
-            </button>
-          </div>
-          <div className="flex space-x-2">
-            <button
-              type="button"
-              onClick={handleUpdate}
-              className="w-full bg-black text-yellow-400 px-4 py-1 text-sm"
-            >
-              Update
-            </button>
-          </div>
-        </form>
-      </div>
-
-      {/* Right side - View Booking Details & Search */}
-      <div className="flex-1 bg-white p-4 border rounded">
-        <h2 className="text-lg font-semibold mb-4">View Customer Details & Search System</h2>
-        
-        {/* Customer Details Box */}
-        {selectedCustomer && (
-          <div className="mb-4 border rounded">
-            <div className="grid grid-cols-2 text-sm">
-              <div className="border-b border-r p-2">
-                <span className="font-semibold">Name:</span> {selectedCustomer.name}
+                <button 
+                  type="button" 
+                  className="bg-black text-yellow-400 px-3 py-1 text-sm"
+                  onClick={handleFetchData}
+                  disabled={loading}
+                >
+                  {loading ? 'Fetching...' : 'Fetch Data'}
+                </button>
               </div>
-              <div className="border-b p-2">
-                <span className="font-semibold">Gender:</span> {selectedCustomer.gender}
-              </div>
-              <div className="border-b border-r p-2">
-                <span className="font-semibold">Email:</span> {selectedCustomer.email}
-              </div>
-              <div className="border-b p-2">
-                <span className="font-semibold">Nationality:</span> {selectedCustomer.nationality}
-              </div>
-              <div className="border-b border-r p-2">
-                <span className="font-semibold">Address:</span> {selectedCustomer.address}
-              </div>
-              <div className="border-b p-2">
-                <span className="font-semibold">Contact:</span> {selectedCustomer.mobile}
-              </div>
+              {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
             </div>
-          </div>
-        )}
 
-        {/* Search Section */}
-        <div className="flex items-center space-x-4 mb-4">
-          <div className="flex items-center">
-            <span className="bg-red-500 text-white px-2 py-1 text-sm mr-2">Search By</span>
-            <select 
-              className="border p-1.5 text-sm"
-              value={searchBy}
-              onChange={(e) => setSearchBy(e.target.value)}
-            >
-              <option>Select Option</option>
-              <option>Mobile</option>
-              <option>Room No</option>
-            </select>
-          </div>
-          <input 
-            type="text" 
-            className="border p-1.5 text-sm flex-1" 
-            placeholder={searchBy === 'Mobile' ? "Enter mobile number..." : "Enter room number..."}
-            value={searchValue}
-            onChange={handleSearchChange}
-          />
-          <button 
-            className="bg-green-700 text-white px-4 py-1.5 text-sm"
-            onClick={handleSearch}
-          >
-            SEARCH
-          </button>
-          <button 
-            className="bg-green-700 text-white px-4 py-1.5 text-sm"
-            onClick={handleShowAll}
-          >
-            SHOW ALL
-          </button>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full border text-sm">
-            <thead>
-              <tr className="bg-gray-50">
-                <th className="border p-1.5 text-left">Mobile</th>
-                <th className="border p-1.5 text-left">Check-in</th>
-                <th className="border p-1.5 text-left">Check-out</th>
-                <th className="border p-1.5 text-left">Room Type</th>
-                <th className="border p-1.5 text-left">Room No</th>
-                <th className="border p-1.5 text-left">Meal</th>
-                <th className="border p-1.5 text-left">No/Days</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredBookings.map((booking: BookingData) => (
-                <tr
-                  key={booking.bookingRef}
-                  onClick={() => {
-                    const customer = customers.find(c => c.mobile === booking.customerRef);
-                    if (customer) {
-                      handleCustomerSelect(customer);
-                      // Set all booking details when selecting from table
+            <div>
+              <label className="block text-sm">Check-in Date:</label>
+              <input
+                type="date"
+                name="checkInDate"
+                value={formData.checkInDate}
+                onChange={handleDateChange}
+                className="w-full border p-1.5 text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-sm">Check-out Date:</label>
+              <input
+                type="date"
+                name="checkOutDate"
+                value={formData.checkOutDate}
+                onChange={handleDateChange}
+                className="w-full border p-1.5 text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-sm">Room Type:</label>
+              <select
+                name="roomType"
+                value={formData.roomType}
+                onChange={(e) => {
+                  handleChange(e);
+                  if (formData.checkInDate && formData.checkOutDate) {
+                    const days = Math.ceil(
+                      (new Date(formData.checkOutDate).getTime() - new Date(formData.checkInDate).getTime()) 
+                      / (1000 * 60 * 60 * 24)
+                    );
+                    if (days > 0) {
+                      const { actualTotal, paidTax, totalCost } = calculateCosts(days, e.target.value);
                       setFormData(prev => ({
                         ...prev,
-                        bookingRef: booking.bookingRef,
-                        mobile: customer.mobile,
-                        checkInDate: formatDateForInput(booking.checkInDate),
-                        checkOutDate: formatDateForInput(booking.checkOutDate),
-                        roomType: booking.roomType,
-                        roomNumber: booking.roomNumber,
-                        meal: booking.meal,
-                        noOfDays: booking.noOfDays.toString(),
-                        numberOfGuests: booking.numberOfGuests,
-                        paidTax: booking.paidTax.toString(),
-                        actualTotal: booking.actualTotal.toString(),
-                        totalCost: booking.totalCost.toString()
+                        roomType: e.target.value,
+                        noOfDays: days.toString(),
+                        actualTotal: actualTotal.toString(),
+                        paidTax: paidTax.toString(),
+                        totalCost: totalCost.toString()
                       }));
+                      return;
                     }
-                  }}
-                  className="border-b hover:bg-gray-50 cursor-pointer"
-                >
-                  <td className="border p-1.5">{booking.customerRef}</td>
-                  <td className="border p-1.5">{formatDate(booking.checkInDate)}</td>
-                  <td className="border p-1.5">{formatDate(booking.checkOutDate)}</td>
-                  <td className="border p-1.5">{booking.roomType}</td>
-                  <td className="border p-1.5">{booking.roomNumber}</td>
-                  <td className="border p-1.5">{booking.meal}</td>
-                  <td className="border p-1.5">{booking.noOfDays}</td>
+                  }
+                  setFormData(prev => ({
+                    ...prev,
+                    roomType: e.target.value
+                  }));
+                }}
+                className="w-full border p-1.5 text-sm"
+              >
+                <option value="Standard">Standard</option>
+                <option value="Deluxe">Deluxe</option>
+                <option value="Suite">Suite</option>
+                <option value="Executive">Executive</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm">Available Room:</label>
+              {(() => {
+                // Generate all room numbers from 100 to 150
+                const allRooms = Array.from({ length: 51 }, (_, i) => (100 + i).toString());
+                // Get all taken room numbers
+                const takenRooms = bookings
+                  .map(b => b.roomNumber)
+                  .filter(room => room);
+                // Filter out taken rooms
+                const availableRooms = allRooms.filter(room => !takenRooms.includes(room));
+                return (
+                  <select
+                    name="roomNumber"
+                    value={formData.roomNumber}
+                    onChange={handleChange}
+                    className="w-full border p-1.5 text-sm"
+                  >
+                    {availableRooms.map(room => (
+                      <option key={room} value={room}>{room}</option>
+                    ))}
+                  </select>
+                );
+              })()}
+            </div>
+            <div>
+              <label className="block text-sm">Meal:</label>
+              <select
+                name="meal"
+                value={formData.meal}
+                onChange={handleChange}
+                className="w-full border p-1.5 text-sm"
+              >
+                <option value="Breakfast">Breakfast</option>
+                <option value="Lunch">Lunch</option>
+                <option value="Dinner">Dinner</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm">No Of Days:</label>
+              <input
+                type="text"
+                name="noOfDays"
+                value={formData.noOfDays}
+                className="w-full border p-1.5 text-sm"
+                readOnly
+              />
+            </div>
+            <div>
+              <label className="block text-sm">Paid Tax:</label>
+              <input
+                type="text"
+                name="paidTax"
+                value={formData.paidTax ? formatCurrency(parseFloat(formData.paidTax.replace('£', ''))) : ''}
+                className="w-full border p-1.5 text-sm"
+                readOnly
+              />
+            </div>
+            <div>
+              <label className="block text-sm">Actual Total:</label>
+              <input
+                type="text"
+                name="actualTotal"
+                value={formData.actualTotal ? formatCurrency(parseFloat(formData.actualTotal.replace('£', ''))) : ''}
+                className="w-full border p-1.5 text-sm"
+                readOnly
+              />
+            </div>
+            <div>
+              <label className="block text-sm">Total Cost:</label>
+              <input
+                type="text"
+                name="totalCost"
+                value={formData.totalCost ? formatCurrency(parseFloat(formData.totalCost.replace('£', ''))) : ''}
+                className="w-full border p-1.5 text-sm"
+                readOnly
+              />
+            </div>
+            <div>
+              <button 
+                type="button" 
+                onClick={handleBillClick}
+                className="w-full bg-black text-yellow-400 px-4 py-1 text-sm mb-2"
+              >
+                Bill
+              </button>
+            </div>
+            <div className="flex space-x-2">
+              <button
+                type="button"
+                onClick={handleUpdate}
+                className="w-full bg-black text-yellow-400 px-4 py-1 text-sm"
+              >
+                Update
+              </button>
+            </div>
+          </form>
+        </div>
+
+        {/* Right side - View Booking Details & Search */}
+        <div className="w-full flex-1 bg-white p-4 border rounded">
+          <h2 className="text-lg font-semibold mb-4">View Customer Details & Search System</h2>
+          
+          {/* Customer Details Box */}
+          {selectedCustomer && (
+            <div className="mb-4 border rounded">
+              <div className="grid grid-cols-2 text-sm">
+                <div className="border-b border-r p-2">
+                  <span className="font-semibold">Name:</span> {selectedCustomer.name}
+                </div>
+                <div className="border-b p-2">
+                  <span className="font-semibold">Gender:</span> {selectedCustomer.gender}
+                </div>
+                <div className="border-b border-r p-2">
+                  <span className="font-semibold">Email:</span> {selectedCustomer.email}
+                </div>
+                <div className="border-b p-2">
+                  <span className="font-semibold">Nationality:</span> {selectedCustomer.nationality}
+                </div>
+                <div className="border-b border-r p-2">
+                  <span className="font-semibold">Address:</span> {selectedCustomer.address}
+                </div>
+                <div className="border-b p-2">
+                  <span className="font-semibold">Contact:</span> {selectedCustomer.mobile}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Search Section */}
+          <div className="flex items-center space-x-4 mb-4">
+            <div className="flex items-center">
+              <span className="bg-red-500 text-white px-2 py-1 text-sm mr-2">Search By</span>
+              <select 
+                className="border p-1.5 text-sm"
+                value={searchBy}
+                onChange={(e) => setSearchBy(e.target.value)}
+              >
+                <option>Select Option</option>
+                <option>Mobile</option>
+                <option>Room No</option>
+              </select>
+            </div>
+            <input 
+              type="text" 
+              className="border p-1.5 text-sm flex-1" 
+              placeholder={searchBy === 'Mobile' ? "Enter mobile number..." : "Enter room number..."}
+              value={searchValue}
+              onChange={handleSearchChange}
+            />
+            <button 
+              className="bg-green-700 text-white px-4 py-1.5 text-sm"
+              onClick={handleSearch}
+            >
+              SEARCH
+            </button>
+            <button 
+              className="bg-green-700 text-white px-4 py-1.5 text-sm"
+              onClick={handleShowAll}
+            >
+              SHOW ALL
+            </button>
+          </div>
+
+          <div className="overflow-x-auto w-full">
+            <table className="w-full border text-sm">
+              <thead>
+                <tr className="bg-gray-50">
+                  <th className="border p-1.5 text-left">Mobile</th>
+                  <th className="border p-1.5 text-left">Check-in</th>
+                  <th className="border p-1.5 text-left">Check-out</th>
+                  <th className="border p-1.5 text-left">Room Type</th>
+                  <th className="border p-1.5 text-left">Room No</th>
+                  <th className="border p-1.5 text-left">Meal</th>
+                  <th className="border p-1.5 text-left">No/Days</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {filteredBookings.map((booking: BookingData, idx) => (
+                  <tr
+                    key={booking.bookingRef ? booking.bookingRef : `booking-${idx}`}
+                    onClick={() => {
+                      const customer = customers.find(c => c.mobile === booking.customerRef);
+                      if (customer) {
+                        handleCustomerSelect(customer);
+                        setFormData({
+                          bookingRef: booking.bookingRef,
+                          mobile: customer.mobile,
+                          checkInDate: formatDateForInput(booking.checkInDate),
+                          checkOutDate: formatDateForInput(booking.checkOutDate),
+                          roomType: booking.roomType === 'Single' ? 'Standard' : booking.roomType,
+                          roomNumber: booking.roomNumber,
+                          meal: booking.meal,
+                          noOfDays: booking.noOfDays.toString(),
+                          numberOfGuests: booking.numberOfGuests,
+                          paidTax: booking.paidTax.toString(),
+                          actualTotal: booking.actualTotal.toString(),
+                          totalCost: booking.totalCost.toString(),
+                          totalAmount: booking.totalAmount,
+                        });
+                      }
+                    }}
+                    className="border-b hover:bg-gray-50 cursor-pointer"
+                  >
+                    <td className="border p-1.5">{booking.customerRef}</td>
+                    <td className="border p-1.5">{formatDate(booking.checkInDate)}</td>
+                    <td className="border p-1.5">{formatDate(booking.checkOutDate)}</td>
+                    <td className="border p-1.5">{booking.roomType}</td>
+                    <td className="border p-1.5">{booking.roomNumber}</td>
+                    <td className="border p-1.5">{booking.meal}</td>
+                    <td className="border p-1.5">{booking.noOfDays}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 
@@ -1022,6 +1035,6 @@ export default function BookingForm() {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 } 
