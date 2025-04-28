@@ -796,18 +796,23 @@ export default function BookingForm() {
           </div>
           <div>
             <label className="block text-sm">Available Room:</label>
-            <select
-              name="roomNumber"
-              value={formData.roomNumber}
-              onChange={handleChange}
-              className="w-full border p-1.5 text-sm"
-            >
-              <option value="101">101</option>
-              <option value="102">102</option>
-              <option value="103">103</option>
-              <option value="104">104</option>
-              <option value="203">203</option>
-            </select>
+            {(() => {
+              const allRooms = ["101", "102", "103", "104", "203"];
+              const bookedRooms = bookings.map(b => b.roomNumber).filter(Boolean);
+              const availableRooms = allRooms.filter(room => !bookedRooms.includes(room) || room === formData.roomNumber);
+              return (
+                <select
+                  name="roomNumber"
+                  value={formData.roomNumber}
+                  onChange={handleChange}
+                  className="w-full border p-1.5 text-sm"
+                >
+                  {availableRooms.map(room => (
+                    <option key={room} value={room}>{room}</option>
+                  ))}
+                </select>
+              );
+            })()}
           </div>
           <div>
             <label className="block text-sm">Meal:</label>

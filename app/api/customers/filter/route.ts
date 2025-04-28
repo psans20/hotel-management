@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { connectDB } from '../../../lib/mongodb';
+import { connectToDatabase } from '../../../lib/mongodb';
 import Customer from '../../../models/Customer';
 
 export async function GET(request: Request) {
@@ -15,7 +15,7 @@ export async function GET(request: Request) {
       );
     }
 
-    await connectDB();
+    await connectToDatabase();
     
     // Create a case-insensitive regex search
     const query = {
