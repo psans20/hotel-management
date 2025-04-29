@@ -8,6 +8,7 @@ import CustomerForm from './components/CustomerForm';
 import BookingForm from './components/BookingForm';
 import CustomerStats from './components/CustomerStats';
 import BookingStats from './components/BookingStats';
+import MobileRestriction from './components/MobileRestriction';
 
 export default function Home() {
   const [selectedItem, setSelectedItem] = useState('Dashboard');
@@ -51,17 +52,20 @@ export default function Home() {
 
   return (
     <div className="min-h-screen">
-      <Navbar />
-      <Time />
-      <div className="flex">
-        <Sidebar onSelectItem={setSelectedItem} selectedItem={selectedItem} />
-        <main className="flex-1 p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h1 className="text-2xl font-bold">Hotel Management System</h1>
-          </div>
-          
-          {renderContent()}
-        </main>
+      <MobileRestriction />
+      <div className="hidden md:block">
+        <Navbar />
+        <Time />
+        <div className="flex">
+          <Sidebar onSelectItem={setSelectedItem} selectedItem={selectedItem} />
+          <main className="flex-1 p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h1 className="text-2xl font-bold">Hotel Management System</h1>
+            </div>
+            
+            {renderContent()}
+          </main>
+        </div>
       </div>
     </div>
   );
