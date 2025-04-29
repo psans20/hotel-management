@@ -3,9 +3,17 @@ import { connectToDatabase } from '@/app/lib/mongodb';
 import Customer from '@/app/models/Customer';
 
 // GET endpoint to fetch a specific customer by customerRef
-export async function GET(request: Request, { params }: { params: { customerRef: string } }) {
+export async function GET(request: Request) {
   try {
-    const { customerRef } = params;
+    // Extract customerRef from the URL
+    const customerRef = request.url.split('/').pop();
+    
+    if (!customerRef) {
+      return NextResponse.json(
+        { error: 'Customer reference is required' },
+        { status: 400 }
+      );
+    }
     
     await connectToDatabase();
     const customer = await Customer.findOne({ customerRef });
@@ -28,9 +36,18 @@ export async function GET(request: Request, { params }: { params: { customerRef:
 }
 
 // DELETE endpoint to remove a customer by customerRef
-export async function DELETE(request: Request, { params }: { params: { customerRef: string } }) {
+export async function DELETE(request: Request) {
   try {
-    const { customerRef } = params;
+    // Extract customerRef from the URL
+    const customerRef = request.url.split('/').pop();
+    
+    if (!customerRef) {
+      return NextResponse.json(
+        { error: 'Customer reference is required' },
+        { status: 400 }
+      );
+    }
+    
     console.log('DELETE request received for customerRef:', customerRef);
     
     // Connect to the database
