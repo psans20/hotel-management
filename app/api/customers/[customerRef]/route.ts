@@ -1,14 +1,14 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/app/lib/mongodb';
 import Customer from '@/app/models/Customer';
 
 // GET endpoint to fetch a specific customer by customerRef
 export async function GET(
-  request: Request,
-  { params }: { params: { customerRef: string } }
+  request: NextRequest,
+  context: { params: { customerRef: string } }
 ) {
   try {
-    const { customerRef } = params;
+    const { customerRef } = context.params;
     
     await connectToDatabase();
     const customer = await Customer.findOne({ customerRef });
@@ -32,11 +32,11 @@ export async function GET(
 
 // DELETE endpoint to remove a customer by customerRef
 export async function DELETE(
-  request: Request,
-  { params }: { params: { customerRef: string } }
+  request: NextRequest,
+  context: { params: { customerRef: string } }
 ) {
   try {
-    const { customerRef } = params;
+    const { customerRef } = context.params;
     console.log('DELETE request received for customerRef:', customerRef);
     
     // Connect to the database
