@@ -2,16 +2,10 @@ import { NextResponse } from 'next/server';
 import { connectToDatabase } from '@/app/lib/mongodb';
 import Customer from '@/app/models/Customer';
 
-type Props = {
-  params: {
-    customerRef: string;
-  };
-};
-
 // GET endpoint to fetch a specific customer by customerRef
 export async function GET(
   request: Request,
-  { params }: Props
+  { params }: { params: { customerRef: string } }
 ) {
   try {
     const { customerRef } = params;
@@ -39,7 +33,7 @@ export async function GET(
 // DELETE endpoint to remove a customer by customerRef
 export async function DELETE(
   request: Request,
-  { params }: Props
+  { params }: { params: { customerRef: string } }
 ) {
   try {
     const { customerRef } = params;
