@@ -90,6 +90,14 @@ export default function BookingForm() {
   useEffect(() => {
     fetchCustomerMobiles();
     fetchBookings();
+    
+    // Set up periodic refresh every 30 seconds
+    const intervalId = setInterval(() => {
+      fetchBookings();
+    }, 30000);
+    
+    // Cleanup interval on component unmount
+    return () => clearInterval(intervalId);
   }, []);
 
   const fetchCustomerMobiles = async () => {
@@ -141,17 +149,30 @@ export default function BookingForm() {
   };
 
   const fetchBookings = async () => {
+    setLoading(true);
     try {
-      const response = await fetch('/api/bookings');
+      const url = `/api/bookings?_t=${Date.now()}`;
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
+      });
+      
       if (!response.ok) {
         throw new Error('Failed to fetch bookings');
       }
-      const bookingsData = await response.json();
-      setBookings(bookingsData);
-      setFilteredBookings(bookingsData);
+      
+      const data = await response.json();
+      setBookings(data);
+      setFilteredBookings(data);
     } catch (error) {
       console.error('Error fetching bookings:', error);
-      setError('Failed to load bookings');
+      setError('Failed to fetch bookings');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -542,7 +563,16 @@ export default function BookingForm() {
         field = 'roomNumber';
       }
       
-      const response = await fetch(`/api/bookings/filter?field=${field}&value=${searchValue}`);
+      const url = `/api/bookings/filter?field=${field}&value=${searchValue}&_t=${Date.now()}`;
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
+      });
+      
       if (!response.ok) throw new Error('Failed to fetch bookings');
       const data = await response.json();
       
@@ -964,6 +994,14 @@ export default function BookingForm() {
           </div>
 
           <div className="overflow-x-auto w-full">
+            <div className="flex justify-end mb-2">
+              <button
+                onClick={() => fetchBookings()}
+                className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm"
+              >
+                Refresh Table
+              </button>
+            </div>
             <table className="w-full border text-sm">
               <thead>
                 <tr className="bg-gray-50">
