@@ -41,6 +41,14 @@ export default function DetailsForm() {
   // Fetch all customers on component mount
   useEffect(() => {
     fetchCustomers();
+    
+    // Set up periodic refresh every 30 seconds
+    const intervalId = setInterval(() => {
+      fetchCustomers();
+    }, 30000);
+    
+    // Cleanup interval on component unmount
+    return () => clearInterval(intervalId);
   }, []);
 
   const fetchCustomers = async (field?: string, value?: string) => {
@@ -51,12 +59,16 @@ export default function DetailsForm() {
       if (field && value) {
         url += `?field=${field}&value=${value}`;
       }
+      // Add timestamp to prevent caching
+      url += (url.includes('?') ? '&' : '?') + `_t=${Date.now()}`;
       console.log('Fetching from URL:', url);
       
       const response = await fetch(url, {
         method: 'GET',
         headers: {
-          'Cache-Control': 'no-cache'
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
         }
       });
       
@@ -229,52 +241,62 @@ export default function DetailsForm() {
           ) : noResults ? (
             <div className="text-center py-4 text-gray-500">No matching records found</div>
           ) : (
-            <table className="w-full border text-sm">
-              <thead>
-                <tr className="bg-gray-50">
-                  <th className="border p-1.5 text-left">Refer No</th>
-                  <th className="border p-1.5 text-left">Name</th>
-                  <th className="border p-1.5 text-left">Mother Name</th>
-                  <th className="border p-1.5 text-left">Gender</th>
-                  <th className="border p-1.5 text-left">PostCode</th>
-                  <th className="border p-1.5 text-left">Mobile</th>
-                  <th className="border p-1.5 text-left">Email</th>
-                  <th className="border p-1.5 text-left">Nationality</th>
-                </tr>
-              </thead>
-              <tbody>
-                {customers.map((customer) => (
-                  <tr 
-                    key={customer.customerRef} 
-                    className="border-b hover:bg-gray-50 cursor-pointer"
-                    onClick={() => {
-                      setFormData({
-                        customerRef: customer.customerRef,
-                        customerName: customer.customerName,
-                        motherName: customer.motherName,
-                        gender: customer.gender,
-                        postCode: customer.postCode,
-                        mobile: customer.mobile,
-                        email: customer.email,
-                        nationality: customer.nationality,
-                        idProofType: customer.idProofType,
-                        idNumber: customer.idNumber,
-                        address: customer.address
-                      });
-                    }}
-                  >
-                    <td className="border p-1.5">{customer.customerRef}</td>
-                    <td className="border p-1.5">{customer.customerName}</td>
-                    <td className="border p-1.5">{customer.motherName}</td>
-                    <td className="border p-1.5">{customer.gender}</td>
-                    <td className="border p-1.5">{customer.postCode}</td>
-                    <td className="border p-1.5">{customer.mobile}</td>
-                    <td className="border p-1.5">{customer.email}</td>
-                    <td className="border p-1.5">{customer.nationality}</td>
+            <div>
+              <div className="flex justify-end mb-2">
+                <button
+                  onClick={() => fetchCustomers()}
+                  className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm"
+                >
+                  Refresh Table
+                </button>
+              </div>
+              <table className="w-full border text-sm">
+                <thead>
+                  <tr className="bg-gray-50">
+                    <th className="border p-1.5 text-left">Refer No</th>
+                    <th className="border p-1.5 text-left">Name</th>
+                    <th className="border p-1.5 text-left">Mother Name</th>
+                    <th className="border p-1.5 text-left">Gender</th>
+                    <th className="border p-1.5 text-left">PostCode</th>
+                    <th className="border p-1.5 text-left">Mobile</th>
+                    <th className="border p-1.5 text-left">Email</th>
+                    <th className="border p-1.5 text-left">Nationality</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {customers.map((customer) => (
+                    <tr 
+                      key={customer.customerRef} 
+                      className="border-b hover:bg-gray-50 cursor-pointer"
+                      onClick={() => {
+                        setFormData({
+                          customerRef: customer.customerRef,
+                          customerName: customer.customerName,
+                          motherName: customer.motherName,
+                          gender: customer.gender,
+                          postCode: customer.postCode,
+                          mobile: customer.mobile,
+                          email: customer.email,
+                          nationality: customer.nationality,
+                          idProofType: customer.idProofType,
+                          idNumber: customer.idNumber,
+                          address: customer.address
+                        });
+                      }}
+                    >
+                      <td className="border p-1.5">{customer.customerRef}</td>
+                      <td className="border p-1.5">{customer.customerName}</td>
+                      <td className="border p-1.5">{customer.motherName}</td>
+                      <td className="border p-1.5">{customer.gender}</td>
+                      <td className="border p-1.5">{customer.postCode}</td>
+                      <td className="border p-1.5">{customer.mobile}</td>
+                      <td className="border p-1.5">{customer.email}</td>
+                      <td className="border p-1.5">{customer.nationality}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
       </div>
