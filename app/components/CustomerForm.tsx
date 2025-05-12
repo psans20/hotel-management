@@ -333,6 +333,11 @@ export default function CustomerForm() {
       setModalMessage('Customer updated successfully');
       setModalType('success');
       setModalOpen(true);
+
+      // Add a small delay and refresh again to ensure data consistency
+      setTimeout(async () => {
+        await fetchCustomers();
+      }, 1000);
     } catch (error) {
       console.error('Error updating customer:', error);
       setModalTitle('Error');
